@@ -2,7 +2,7 @@
 #Authors: Cécile Chéron-Bessou, Damien Beillouin, Alexis Thoumazeau, Lydie Chapuis-Lardy, Tiphaine Chevallier, Julien Demenois, Paul N Nelson
 #v1.0, 2025-2-10
 
-The code was primarily elaborated by Damien Beillouin and Cécile Chéron-Bessou
+The code was developed by Damien Beillouin and Cécile Chéron-Bessou
 
 ####################################### 1. Load DATA
 
@@ -162,7 +162,7 @@ T1 <- raster("~/wc2.1_30s_bio_1.tif")
 # Adding averaged precipitations and temperature based on the coordinates
 
 POXC_W<-POXC_whit %>% dplyr::filter(!is.na(Long_x),!is.na(Lat_y))
-TEST1<-sf::st_as_sf(POXC_W, coords = c( "Long_x", "Lat_y" ), crs = st_crs(4326))
+TEST1<-sf::st_as_sf(POXC_W, coords = c( "Long_x", "Lat_y" ), crs = st_crs(4326))    #EPSG:4326, also known as the WGS84 projection (because it's based on WGS84's ellipsoid), is a coordinate system used in Google Earth and GSP systems
 values <- raster::extract(P1,TEST1)
 DATA_P <- cbind.data.frame(POXC_W,values)
 names(DATA_P)[24]<-"Precipitations"
