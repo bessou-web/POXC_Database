@@ -2,6 +2,8 @@
 #Authors: Cécile Chéron-Bessou, Damien Beillouin, Alexis Thoumazeau, Lydie Chapuis-Lardy, Tiphaine Chevallier, Julien Demenois, Paul N Nelson
 #v1.0, 2025-2-10
 
+The code was primarily elaborated by Damien Beillouin and Cécile Chéron-Bessou
+
 ####################################### 1. Load DATA
 
 
@@ -47,13 +49,13 @@ setwd(dir="REPOSITORY-NAME")
 ## 1.1 A_Studies, n= 723----
 # Table of all studies extracted from search motors and filtered for errors
 
-A_data <- read.delim("~A_LIST.OF.STUDIES_POXC_DB_v1.0.csv")
+A_data <- read.delim("~/A_LIST.OF.STUDIES_POXC_DB_v1.0.csv")
 
 
 ## 1.2 B_REJECTED_Studies, n= 454 ----
 # Table of rejected studies according to the selection criteria
 
-B_data <- read.delim("~B_REJECTED.STUDIES_POXC_DB_v1.0.csv")
+B_data <- read.delim("~/B_REJECTED.STUDIES_POXC_DB_v1.0.csv")
 
 
 
@@ -61,12 +63,12 @@ B_data <- read.delim("~B_REJECTED.STUDIES_POXC_DB_v1.0.csv")
 # Table of retained studies according to the selection criteria, including the primary studies added from meta-analyses or syntheses
 # This table contains the geographical information of each experimental site, including extra lines for studies covering more than one site
 
-C_data <- read.delim("~C_RETAINED.STUDIES_POXC_DB_v1.0.csv")
+C_data <- read.delim("~/C_RETAINED.STUDIES_POXC_DB_v1.0.csv")
 
 
 ## 1.4 D_EFFECT.SIZES, , n= 13,636----
 
-D_data <- read.delim("~D_EFFECT.SIZES_POXC_DB_v1.0.csv")
+D_data <- read.delim("~/D_EFFECT.SIZES_POXC_DB_v1.0.csv")
 
 
 ## 1.5 E_QUALITY----
@@ -154,13 +156,13 @@ ggplot() +
 ## https://www.worldclim.org/data/worldclim21.html (19.tiff) WorldClim Bioclimatic variables for WorldClim version 2., 30-seconde resolution
 ## They are the average for the years 1970-2000.BIO1 = Annual Mean Temperature + BIO12 = Annual Mean Precipitation
 
-P1 <- raster("~wc2.1_30s_bio_12.tif")
-T1 <- raster("~wc2.1_30s_bio_1.tif")
+P1 <- raster("~/wc2.1_30s_bio_12.tif")
+T1 <- raster("~/wc2.1_30s_bio_1.tif")
 
 # Adding averaged precipitations and temperature based on the coordinates
 
 POXC_W<-POXC_whit %>% dplyr::filter(!is.na(Long_x),!is.na(Lat_y))
-TEST1<-sf::st_as_sf(POXC_W, coords = c( "Long_x", "Lat_y" ) )
+TEST1<-sf::st_as_sf(POXC_W, coords = c( "Long_x", "Lat_y" ), crs = st_crs(4326))
 values <- raster::extract(P1,TEST1)
 DATA_P <- cbind.data.frame(POXC_W,values)
 names(DATA_P)[24]<-"Precipitations"
