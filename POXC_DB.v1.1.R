@@ -5,13 +5,16 @@
 The code was developed by Damien Beillouin and Cécile Chéron-Bessou
 
 ####################################### 1. Load DATA
-
+install.packages(c("tidyverse","tidyr","tibble","dplyr", "ggplot2","ggExtra","ggpointdensity",
+                   "ggridges","maps", "mapdata","ggnewscale","raster",
+                   "sp","cowplot","ggpubr","hrbrthemes","viridis",
+                   "ragg","janitor","forcats","dplyr","stringr",
+                   "esc","sf","broom","magrittr"))
 
 #libraries
 library(tidyverse)      # Wrangling with data
 library(tidyr)          # To clean data part of tidyverse?
 library(tibble)
-library(lubridate)      # For dates, in case
 library(ggplot2)
 library(ggExtra)
 library(ggpointdensity) # To visualise data
@@ -20,23 +23,18 @@ library(maps)
 library(mapdata)
 library(ggnewscale)
 library(raster)
-library(plotbiomes)
 library(sp)
 library(cowplot)
 library(ggpubr)         # To add statistics easily to ggplot2
 library(hrbrthemes)
 library(viridis)        # To have nice colours and robust to colourblindness
-library(extrafont)
 library(ragg)
 library(janitor)
 library(forcats)
 library(dplyr)          # To select columns
 library(stringr)        # To modify character strings in columns
-library(ggtext)
-library(writexl)        # To export dataframe to Excel
-library(openxlsx)
-library(rstatix)        # To do ANOVA
 library(esc)
+library(sf)
 library(broom)          # To use tidy()
 library(magrittr)       # To use %>% [ CTRL + MAJ + M]
 
