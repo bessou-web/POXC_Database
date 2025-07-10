@@ -1,6 +1,6 @@
 #A global database on land use and land management change effects on soil KMnO4-oxidisable organic carbon
 #Authors: Cécile Chéron-Bessou, Damien Beillouin, Alexis Thoumazeau, Lydie Chapuis-Lardy, Tiphaine Chevallier, Julien Demenois, Paul N Nelson
-#v1.0, 2025-2-10
+#v1.1, 2025-7-10
 
 The code was developed by Damien Beillouin and Cécile Chéron-Bessou
 
@@ -43,6 +43,7 @@ setwd(dir="REPOSITORY-NAME")
 
 
 # 1. Data files for the data paper----
+## Please double-check that read.delim() uploads the dataframe with the proper separators for digits and columns, which may be affected by the machine regional parameters.
 
 ## 1.1 A_Studies, n= 723----
 # Table of all studies extracted from search motors and filtered for errors
@@ -53,9 +54,7 @@ A_data <- read.delim("~/A_LIST.OF.STUDIES_POXC_DB_v1.0.csv")
 ## 1.2 B_REJECTED_Studies, n= 454 ----
 # Table of rejected studies according to the selection criteria
 
-B_data <- read.delim("~/B_REJECTED.STUDIES_POXC_DB_v1.0.csv")
-
-
+B_data <- read.delim("~/B_REJECTED.STUDIES_POXC_DB_v1.1.csv")
 
 ## 1.3 C_RETAINED_Studies, , n= 372 ----
 # Table of retained studies according to the selection criteria, including the primary studies added from meta-analyses or syntheses
@@ -63,11 +62,9 @@ B_data <- read.delim("~/B_REJECTED.STUDIES_POXC_DB_v1.0.csv")
 
 C_data <- read.delim("~/C_RETAINED.STUDIES_POXC_DB_v1.0.csv")
 
-
 ## 1.4 D_EFFECT.SIZES, , n= 13,636----
 
 D_data <- read.delim("~/D_EFFECT.SIZES_POXC_DB_v1.0.csv")
-
 
 ## 1.5 E_QUALITY----
 # Table containing the quality scores for each retained study
