@@ -1,0 +1,393 @@
+### POXC Meta-analysis – Preliminary Data Check and Outlier Detection
+# Script associated with the 2024 POXC database (version 1.1)
+
+# This script performs preliminary data verification and outlier detection for the
+# POXC (Permanganate Oxidizable Carbon) meta-analysis database. It calculates
+# effect sizes, identifies potential outliers, and generates key diagnostic plots.
+# The aim is to ensure data quality and transparency in accordance with FAIR principles.
+
+# Authors: Cécile Chéron-Bessou, Damien Beillouin, Alexis Thoumazeau,
+#          Lydie Chapuis-Lardy, Tiphaine Chevallier, Julien Demenois, Paul N. Nelson
+# Date: July 9, 2025
+# Version: 1.2 (Improved for FAIR compliance)
+
+# -----------------------------------------------------------------------------
+# 0. Setup and Package Loading
+# -----------------------------------------------------------------------------
+
+# Ensure all necessary R packages are installed and loaded.
+# If a package is not installed, use install.packages("package_name") first.
+library(ggplot2)    # For creating high-quality statistical graphics
+library(ggExtra)    # For adding marginal histograms/density plots to ggplot2
+library(dplyr)      # For data manipulation and transformation (e.g., mutate, filter, group_by)
+library(metafor)    # For meta-analysis computations, specifically effect size calculation (escalc)
+library(ggpubr)     # For easy creation of 'publication ready' plots (e.g., theme_pubr)
+library(plotly)     # For creating interactive web-based visualizations
+
+# Set global options or themes if desired for consistent plotting
+theme_set(theme_minimal()) # Apply a minimal theme to all ggplot2 plots by default
+
+# -----------------------------------------------------------------------------
+# 1. Data Loading and Initial Preparation
+# -----------------------------------------------------------------------------
+
+# Load the raw POXC database.
+# Ensure the file path is correct and accessible. For reproducibility, it's
+# recommended to use relative paths or provide clear instructions on data location.
+# Data Source as an example (this file was already checked for outliers that originated in extraction errors): D_EFFECT.SIZES_POXC_DB_v1.1 1.csv
+# This dataset is expected to contain columns for treatment and control means,
+# standard deviations, and sample sizes.
+tryCatch({
+  poxc_data <- read.csv("~/Downloads/D_EFFECT.SIZES_POXC_DB_v1.1 1.csv")
+  message("Data loaded successfully.")
+}, error = function(e) {
+  stop(paste("Error loading data:", e$message,
+             "Please ensure 'D_EFFECT.SIZES_POXC_DB_v1.1 1.csv' is in the correct path."))
+})
+
+# Display the structure and a glimpse of the loaded data for initial verification.
+str(poxc_data)
+head(poxc_data)
+
+# -----------------------------------------------------------------------------
+# 2. Effect Size Calculation and Derived Metrics
+# -----------------------------------------------------------------------------
+
+# Calculate the effect size using the 'escalc' function from the 'metafor' package.
+# Measure: "ROM" (Ratio of Means) is chosen as it is suitable for comparing
+#          treatment and control groups when the outcome is a ratio.
+#          The log response ratio (lnRR) is calculated as yi = ln(Mean_T / Mean_C).
+#          The variance of the log response ratio (vi) is also computed.
+# Inputs:
+#   m1i: Mean of the treatment group (POXC_Mean_T_g.kg)
+#   sd1i: Standard deviation of the treatment group (POXC_SD_T1_g.kg)
+#   n1i: Sample size (number of replicates) for the treatment group (Treat_Rep)
+#   m2i: Mean of the control group (POXC_Mean_C_g.kg)
+#   sd2i: Standard deviation of the control group (POXC_SD_C1_g.kg)
+#   n2i: Sample size (number of replicates) for the control group (Control_Rep)
+# Output: New columns 'yi' (effect size) and 'vi' (variance of effect size) are added.
+poxc_data <- escalc(
+  measure = "ROM",
+  m1i = POXC_Mean_T_g.kg,
+  sd1i = POXC_SD_T1_g.kg,
+  n1i = Treat_Rep,
+  m2i = POXC_Mean_C_g.kg,
+  sd2i = POXC_SD_C1_g.kg,
+  n2i = Control_Rep,
+  data = poxc_data, # Ensure 'data' argument refers to the correct dataframe
+  var.names = c("yi", "vi")
+)
+
+# Compute additional derived metrics for analysis and visualization.
+poxc_data <- poxc_data %>%
+  mutate(
+    # Percent difference: (exp(lnRR) - 1) * 100
+    # This converts the log response ratio back to a percentage change,
+    # providing a more intuitive understanding of the effect.
+    percent_diff = (exp(yi) - 1) * 100,
+    # Log-transformed treatment and control means:
+    # Used for log-log plots to visualize proportional relationships and
+    # identify deviations from a 1:1 line more clearly.
+    log_T = log(POXC_Mean_T_g.kg),
+    log_C = log(POXC_Mean_C_g.kg)
+  )
+
+# Define quantiles for POXC treatment means.
+# This categorizes the treatment POXC values into quartiles, which can be
+# used for aesthetic mapping (e.g., size) in plots to reveal patterns
+# across different ranges of POXC levels.
+quantile_breaks <- quantile(poxc_data$POXC_Mean_T_g.kg, probs = seq(0, 1, 0.25), na.rm = TRUE)
+poxc_data <- poxc_data %>%
+  mutate(
+    POXC_quantile = cut(POXC_Mean_T_g.kg,
+                        breaks = quantile_breaks,
+                        include.lowest = TRUE,
+                        labels = c("Q1", "Q2", "Q3", "Q4"))
+  )
+
+# -----------------------------------------------------------------------------
+# 3. Outlier Detection for Effect Sizes (lnRR)
+# -----------------------------------------------------------------------------
+
+# Identify potential outliers in the effect size (yi) using the Interquartile Range (IQR) method.
+# Data points falling outside 1.5 * IQR from the first (Q1) or third (Q3) quartile
+# are flagged as potential outliers. This is a common statistical method for
+# identifying extreme values.
+IQR_yi <- IQR(poxc_data$yi, na.rm = TRUE)
+Q1 <- quantile(poxc_data$yi, 0.25, na.rm = TRUE)
+Q3 <- quantile(poxc_data$yi, 0.75, na.rm = TRUE)
+lower_bound <- Q1 - 1.5 * IQR_yi
+upper_bound <- Q3 + 1.5 * IQR_yi
+
+# Create a flag column to mark suspected outliers.
+poxc_data$outlier_flag <- poxc_data$yi < lower_bound | poxc_data$yi > upper_bound
+
+# Optionally inspect the rows identified as suspected outliers.
+# This allows for manual review and validation of these data points.
+outliers_yi <- poxc_data %>% filter(outlier_flag == TRUE)
+message(paste("Number of suspected outliers in effect size (lnRR):", nrow(outliers_yi)))
+if (nrow(outliers_yi) > 0) {
+  print("Details of suspected outliers in lnRR:")
+  print(outliers_yi %>% select(POXC_ID, yi, vi, percent_diff, outlier_flag))
+}
+
+# Summary statistics for the percent differences.
+# Provides a quick overview of the magnitude and spread of the observed effects.
+message("\nSummary of Percent Differences in POXC:")
+summary(poxc_data$percent_diff)
+
+# -----------------------------------------------------------------------------
+# 4. Visual Data Verification: Log-log Plot of POXC Values
+# -----------------------------------------------------------------------------
+
+# Plot: Log-log plot of POXC (Treatment vs Control) with outlier highlighting.
+# This plot helps visualize the relationship between treatment and control POXC
+# values on a logarithmic scale. Points deviating significantly from the y=x line
+# (or a linear trend) indicate a strong effect. Outliers flagged by the IQR method
+# are highlighted in red for easy identification.
+plot_poxc_loglog <- ggplot(poxc_data, aes(x = log_T, y = log_C)) +
+  geom_point(aes(size = POXC_quantile, color = outlier_flag), shape = 1, alpha = 0.7) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey50") + # Add a 1:1 line
+  scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red"),
+                     labels = c("False" = "No", "True" = "Yes")) + # Improve legend labels
+  labs(
+    title = "Log-log Plot of POXC Values (Treatment vs Control)",
+    x = expression(paste("log(POXC Treatment, g", kg^{-1}, ")")), # Using expression for LaTeX-like formatting
+    y = expression(paste("log(POXC Control, g", kg^{-1}, ")")),
+    size = "POXC Quantile",
+    color = "Suspected Outlier (lnRR)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    axis.title = element_text(size = 12),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9)
+  )
+
+print(plot_poxc_loglog)
+
+# -----------------------------------------------------------------------------
+# 5. Distribution of Effect Sizes (lnRR)
+# -----------------------------------------------------------------------------
+
+# Histogram with density overlay for lnRR (log response ratio).
+# This plot shows the overall distribution of effect sizes. A normal-like
+# distribution centered around zero would suggest no overall effect, while
+# a shift indicates a general positive or negative impact.
+plot_hist_lnRR <- ggplot(poxc_data, aes(x = yi)) +
+  geom_histogram(aes(y = after_stat(density)), # Use after_stat(density) for newer ggplot2 versions
+                 fill = "lightblue", color = "black", binwidth = 0.1, alpha = 0.7) +
+  geom_density(color = "darkblue", size = 1.2) +
+  geom_vline(aes(xintercept = 0), linetype = "dashed", color = "grey40", size = 0.8) +
+  labs(
+    title = "Distribution of Log Response Ratios (lnRR)",
+    x = "Log Response Ratio (lnRR)",
+    y = "Density"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    axis.title = element_text(size = 12)
+  )
+
+print(plot_hist_lnRR)
+
+# Author's Note: "Des valeurs très élevées: a verifier"
+# This comment highlights that some very high lnRR values were observed.
+# The original author verified some of these (e.g., POXC_ID 547_4,5,6,7)
+# and found them to be correct based on raw data. However, study 626 at 15-30cm
+# was noted as problematic. This emphasizes the importance of manual data curation
+# and cross-referencing with original sources for extreme values.
+# Further investigation of such values is crucial for robust meta-analysis.
+
+# -----------------------------------------------------------------------------
+# 6. Variance and Mean Effect Size Relationship
+# -----------------------------------------------------------------------------
+
+# Calculate mean and standard deviation of variances (vi).
+mean_vi <- mean(poxc_data$vi, na.rm = TRUE)
+sd_vi <- sd(poxc_data$vi, na.rm = TRUE)
+
+# Add a z-score column for variances and flag suspicious variances.
+# Z-scores indicate how many standard deviations a data point is from the mean.
+# A threshold of |z| > 10 is used here to identify extremely high or low variances,
+# which might indicate data entry errors or unusual study characteristics.
+poxc_data <- poxc_data %>%
+  mutate(
+    vi_z = (vi - mean_vi) / sd_vi,
+    suspicious_vi = abs(vi_z) > 10 # Flag variances with absolute z-score > 10
+  )
+
+# Optionally inspect the rows identified as having suspicious variances.
+outliers_vi <- poxc_data %>% filter(suspicious_vi == TRUE)
+message(paste("\nNumber of suspected outliers in variance (vi):", nrow(outliers_vi)))
+if (nrow(outliers_vi) > 0) {
+  print("Details of suspected outliers in variance:")
+  print(outliers_vi %>% select(POXC_ID, yi, vi, vi_z, suspicious_vi))
+}
+
+
+# Plot: Effect size (yi) vs. Variance (vi) with suspicious points highlighted.
+# This plot helps to visualize the relationship between the magnitude of the
+# effect and its precision (inverse of variance). Studies with very high
+# variance can disproportionately influence meta-analysis results.
+Variance_All_metric <- ggplot(poxc_data, aes(x = yi, y = vi)) +
+  geom_point(alpha = 0.6, color = "#2C7BB6", size = 2) + # Regular points in blue
+  geom_point(data = filter(poxc_data, suspicious_vi), aes(x = yi, y = vi),
+             color = "red", size = 4, shape = 8, stroke = 1.5) + # Suspicious points in red with a distinct shape
+  labs(
+    title = "Effect Size vs. Variance with Z-score Outlier Detection",
+    x = "Effect Size (lnRR)",
+    y = "Variance (vi)"
+  ) +
+  theme_pubr() + # Use ggpubr's publication-ready theme
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    axis.title = element_text(size = 12)
+  )
+
+print(Variance_All_metric)
+
+# Author's Note: "Des valeurs très élevées: a verifier"
+# The original author noted that study 626 at 15-30cm was problematic due to
+# very small values (potentially unreadable on graph) combined with high standard
+# deviation, suggesting potential data issues. Errors were also corrected in
+# studies 360 and 710. This highlights the iterative nature of data cleaning
+# and the importance of documenting such corrections.
+
+# -----------------------------------------------------------------------------
+# 7. Forest Plot: Effect Sizes by Intervention Category
+# -----------------------------------------------------------------------------
+
+# Step 1: Prepare the data - assign an order within each intervention category.
+# This step ensures that studies within each intervention category are ordered
+# for better visualization in the forest plot.
+poxc_data_ordered <- poxc_data %>%
+  ungroup() %>%
+  group_by(Cat_Intervention) %>%
+  mutate(order_within_group = row_number()) %>%
+  ungroup()
+
+# Step 2: Compute 95% confidence intervals for effect sizes (yi).
+# The confidence interval provides a range within which the true effect size
+# is likely to lie. A 95% CI means that if the study were repeated many times,
+# 95% of the CIs would contain the true effect size.
+z_value <- qnorm(0.975) # Z-value for a 95% confidence interval (two-tailed)
+poxc_data_ordered <- poxc_data_ordered %>%
+  mutate(
+    margin_of_error = z_value * sqrt(vi),
+    lower_CI = yi - margin_of_error,
+    upper_CI = yi + margin_of_error
+  )
+
+# Step 3: Create the forest plot.
+# A forest plot visually summarizes the effect sizes and their confidence
+# intervals for individual studies, grouped by intervention category.
+# It allows for quick assessment of the magnitude and precision of effects
+# across different studies and categories.
+forest_plot <- ggplot(poxc_data_ordered) +
+  geom_point(
+    aes(
+      x = reorder(as.factor(paste0(Cat_Intervention, "_", order_within_group)), yi),
+      y = yi,
+      color = Cat_Intervention
+    ),
+    size = 2.5,
+    alpha = 0.8,
+    position = position_dodge(width = 0.5) # Slightly dodge points to prevent overlap
+  ) +
+  geom_errorbar(
+    aes(
+      x = reorder(as.factor(paste0(Cat_Intervention, "_", order_within_group)), yi),
+      ymin = lower_CI,
+      ymax = upper_CI,
+      color = Cat_Intervention # Color error bars by intervention category
+    ),
+    width = 0.2,
+    position = position_dodge(width = 0.5)
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", size = 0.8) +
+  scale_x_discrete(name = "Studies (Ordered by Effect Size within Intervention Category)") +
+  scale_y_continuous(name = "Effect Size (lnRR) with 95% Confidence Interval") +
+  labs(
+    title = "Forest Plot of Effect Sizes by Intervention Category",
+    color = "Intervention Category" # Add a legend title for color
+  ) +
+  ggpubr::theme_pubr() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    axis.title = element_text(size = 12),
+    axis.text.y = element_blank(), # Hide y-axis text as it's long and flipped
+    axis.ticks.y = element_blank(), # Hide y-axis ticks
+    legend.position = "right", # Place legend on the right
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9)
+  ) +theme(legend.position = "none")+
+  coord_flip() # Flip coordinates to make it a horizontal forest plot
+
+print(forest_plot)
+
+# -----------------------------------------------------------------------------
+# 8. Variance Plot (Effect Size vs. Log-transformed Variance)
+# -----------------------------------------------------------------------------
+
+# Plot: Effect size (yi) vs. Log of Variance (log(vi)).
+# This plot helps to assess the heterogeneity of variances across studies.
+# Log-transforming variance often helps to normalize its distribution and
+# make patterns more discernible, especially when variances span a wide range.
+# The size of the points is mapped to the number of treatment replicates,
+# providing insight into how sample size relates to effect size and variance.
+variance_plot <- ggplot(poxc_data_ordered) + # Use the ordered data for consistency
+  geom_point(aes(x = yi,
+                 y = log(vi), # Log-transform variance for better visualization
+                 color = Cat_Intervention,
+                 size = as.numeric(Treat_Rep),
+                 fill = POXC_ID), # Fill by POXC_ID (unique study identifier)
+             shape = 21, alpha = 0.8, stroke = 0.5) + # shape 21 allows fill and color, stroke adds border
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray", size = 0.8) +
+  scale_size_area(max_size = 6, name = "Treatment Replicates") + # Use scale_size_area for better size representation
+  labs(
+    x = "Effect Size (lnRR)",
+    y = expression(paste("Log of Variance (log(", v[i], "))")), # Using expression for LaTeX-like formatting
+    title = "Effect Size vs. Log-transformed Variance by Intervention",
+    color = "Intervention Category",
+    fill = "POXC Study ID"
+  ) +
+  ggpubr::theme_pubr() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    axis.title = element_text(size = 12),
+    legend.position = "right",
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9)
+  )+theme(legend.position = "none")
+
+print(variance_plot)
+
+# Convert the static ggplot to an interactive plotly plot.
+# Interactive plots allow users to hover over points to see specific data
+# details (e.g., POXC_ID, yi, vi), which greatly enhances data exploration
+# and accessibility, aligning with FAIR principles.
+tryCatch({
+  variance_plotly <- plotly::ggplotly(variance_plot)
+  print(variance_plotly)
+  message("Interactive variance plot generated successfully.")
+}, error = function(e) {
+  warning(paste("Could not generate interactive plotly plot:", e$message,
+                "Ensure 'plotly' package is installed and loaded."))
+})
+
+# -----------------------------------------------------------------------------
+# 9. Session Information
+# -----------------------------------------------------------------------------
+
+# Provides details about the R version and attached packages.
+# This is crucial for reproducibility, ensuring that others can replicate
+# the analysis environment.
+message("\n--- R Session Information ---")
+sessionInfo()
+
+# -----------------------------------------------------------------------------
+# End of Script
+# -----------------------------------------------------------------------------
