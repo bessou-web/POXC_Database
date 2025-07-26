@@ -1,13 +1,16 @@
+#A global database on land use and land management change effects on soil KMnO4-oxidisable organic carbon
+#Authors: Cécile Chéron-Bessou, Damien Beillouin, Alexis Thoumazeau, Lydie Chapuis-Lardy, Tiphaine Chevallier, Julien Demenois, Paul N Nelson
+#v1.1, 2025-7-10
+
+The code was developed by Damien Beillouin
+
 ### POXC Meta-analysis – Preliminary Data Check and Outlier Detection
 # Script associated with the 2024 POXC database (version 1.1)
-
 # This script performs preliminary data verification and outlier detection for the
-# POXC (Permanganate Oxidizable Carbon) meta-analysis database. It calculates
+# POXC (Permanganate Oxidisable Carbon) meta-analysis database. It calculates
 # effect sizes, identifies potential outliers, and generates key diagnostic plots.
 # The aim is to ensure data quality and transparency in accordance with FAIR principles.
 
-# Authors: Cécile Chéron-Bessou, Damien Beillouin, Alexis Thoumazeau,
-#          Lydie Chapuis-Lardy, Tiphaine Chevallier, Julien Demenois, Paul N. Nelson
 # Date: July 9, 2025
 # Version: 1.2 (Improved for FAIR compliance)
 
