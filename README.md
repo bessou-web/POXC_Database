@@ -1,6 +1,6 @@
 #A global database on land use and management change effects on soil KMnO4-oxidisable organic carbon (POXC)
-
-##Chéron-Bessou, Cécile; Beillouin, Damien; Thoumazeau, Alexis; Chapuis-Lardy, Lydie; Chevallier, Tiphaine; Demenois, Julien; Nelson, Paul N., 2025
+#Chéron-Bessou, Cécile; Beillouin, Damien; Thoumazeau, Alexis; Chapuis-Lardy, Lydie; Chevallier, Tiphaine; Demenois, Julien; Nelson, Paul N., 2025
+#v1.1, 2025-7-10
 
 ##Code associated with the datapaper https://doi.org/10.18167/DVN1/78A2II, CIRAD Dataverse
 
