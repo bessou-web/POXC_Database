@@ -1,4 +1,4 @@
-#A global database on land use and land management change effects on soil KMnO4-oxidisable organic carbon
+#A global database on land use and land management change effects on soil KMnO4-oxidisable organic carbon (POXC)
 #Authors: Cécile Chéron-Bessou, Damien Beillouin, Alexis Thoumazeau, Lydie Chapuis-Lardy, Tiphaine Chevallier, Julien Demenois, Paul N Nelson
 #v1.1, 2025-7-10
 
@@ -41,12 +41,21 @@ theme_set(theme_minimal()) # Apply a minimal theme to all ggplot2 plots by defau
 # This dataset is expected to contain columns for treatment and control means,
 # standard deviations, and sample sizes.
 tryCatch({
-  poxc_data <- read.csv("~/Downloads/D_EFFECT.SIZES_POXC_DB_v1.1 1.csv")
+  poxc_data <- read.csv("~/Downloads/1_EFFECT.SIZES_POXC_DB_v1.1 1.csv")
   message("Data loaded successfully.")
 }, error = function(e) {
   stop(paste("Error loading data:", e$message,
-             "Please ensure 'D_EFFECT.SIZES_POXC_DB_v1.1 1.csv' is in the correct path."))
+             "Please ensure '1_EFFECT.SIZES_POXC_DB_v1.1 1.csv' is in the correct path."))
 })
+
+# In case, the user wants to add the studies DOI, one may apply the following code
+# Retrieving the DOI numbers from the file C_RETAINED.STUDIES_POXC_DB_v1.1 1.csv
+
+C_DOI <- read.csv("~/Downloads/C_RETAINED.STUDIES_POXC_DB_v1.1 1.csv")
+C_DOI <- C_DOI[,c(1,2)]
+
+1_EFFECT.SIZES_POXC_DB_v1.1 1.csv <- 1_EFFECT.SIZES_POXC_DB_v1.1 1.csv %>%
+       left_join(1_EFFECT.SIZES_POXC_DB_v1.1 1.csv, C_DOI, by = "Studies", no_matches = "never")
 
 # Display the structure and a glimpse of the loaded data for initial verification.
 str(poxc_data)
